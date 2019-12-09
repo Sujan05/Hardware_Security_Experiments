@@ -1,0 +1,211 @@
+module adc(clk_in, rst,leddata, seven_seg);
+	input rst;
+	input clk_in;
+	output [7:0] leddata;
+	output reg [6:0]seven_seg;
+
+
+	wire clk;
+	wire locked; 
+	wire response_valid;
+	wire [4:0] response_channel;
+	wire [11:0] response_data;
+	wire [31:0] sequencer_csr_writedata;
+	assign sequencer_csr_writedata = 3;  //bit 0 is set to 1 for keep running the process
+														// bit 1 is set to 1 for single cycle adc conversion
+														//rest of the bits are assigned to zero
+	wire [11:0] mem_content;
+	
+
+	
+	//assign leddata = response_data[7:0]; 
+	//assign leddata = counter[7:0]; 
+
+ 	//assign leddata[7:1] = (temp>0)?temp:1; 
+	assign leddata = mem_content[7:0];
+	
+	
+
+	
+	always @(posedge clk_in) begin
+			
+		
+		if(mem_content[11:8] == 0) begin
+			seven_seg <= 7'b1000000;	
+		end else if(mem_content[11:8] == 1) begin
+			seven_seg <= 7'b1111001;
+		end else if(mem_content[11:8] == 2) begin
+			seven_seg <= 7'b0100100;
+		end else if(mem_content[11:8] == 3) begin
+			seven_seg <= 7'b0110000;
+		end else if(mem_content[11:8] == 4) begin
+			seven_seg <= 7'b0011001;
+		end else if(mem_content[11:8] == 5) begin
+			seven_seg <= 7'b0010010;
+		end else if(mem_content[11:8] == 6) begin
+			seven_seg <= 7'b0000010;
+		end else if(mem_content[11:8] == 7) begin
+			seven_seg <= 7'b1111000;
+		end else if(mem_content[11:8] == 8) begin
+			seven_seg <= 7'b0000000;
+		end else if(mem_content[11:8] == 9) begin
+			seven_seg <= 7'b0010000;
+		end else if(mem_content[11:8] == 10) begin
+			seven_seg <= 7'b0001000;
+		end else if(mem_content[11:8] == 11) begin
+			seven_seg <= 7'b0000011;
+		end else if(mem_content[11:8] == 12) begin
+			seven_seg <= 7'b0000110;
+		end else if(mem_content[11:8] == 13) begin
+			seven_seg <= 7'b0100001;
+		end else if(mem_content[11:8] == 14) begin
+			seven_seg <= 7'b0000110;
+		end else begin
+			seven_seg <= 7'b0001110;
+		end	
+	end
+	
+	
+	reg [27:0] counter = 0;
+	reg [11:0] count_data;
+	reg [2:0] address;
+	wire trigger_wire;
+	
+	
+	always @(posedge clk_in) begin
+		if(trigger_wire==1) begin
+			address = 0;
+			count_data = 12'b111100000000;
+		end else begin
+			address = 0;
+			count_data = 12'b000011111111;
+		end
+	end
+	
+	
+//	always @(posedge clk_in) begin
+//		if(rst) begin
+//			counter =0;
+//		end else begin
+//			if(mem_content<3643) begin
+//				count_data=12'b111100000000;
+//			end
+//			
+//			if(counter==6'b1111111111111111111111111111) begin
+//				counter = 0;
+//				count_data[7:0] =~count_data[7:0];				
+//			end else begin
+//				counter = counter+1;
+//			end
+//		end	
+//	end
+	
+	statemachine us (.clk(clk_in), .mem_content(mem_content), .trigger(trigger_wire));
+		
+	pll10 U0(.inclk0(clk_in), .areset(rst), .c0(clk), .locked(locked));
+	
+	
+
+	adc12 u1 (
+				.adc_pll_clock_clk(clk),       //  adc_pll_clock.clk
+				.adc_pll_locked_export(locked),   // adc_pll_locked.export
+				.clock_clk(clk_in),               //          clock.clk
+				.reset_sink_reset_n(1'b1),      //     reset_sink.reset_n
+				.response_valid(response_valid),          //       response.valid
+				.response_channel(response_channel),        //               .channel
+				.response_data(response_data),           //               .data
+				.response_startofpacket(),  //               .startofpacket
+				.response_endofpacket(),    //               .endofpacket
+				.sequencer_csr_address(0),   //  sequencer_csr.address
+				.sequencer_csr_read(1'b0),      //               .read
+				.sequencer_csr_write(1'b1),     //               .write
+				.sequencer_csr_writedata(sequencer_csr_writedata), //               .writedata
+				.sequencer_csr_readdata()   //               .readdata
+				);
+
+
+	ram10 U2(
+				.address(0),
+				.clock(clk_in),
+				.data(response_data),
+				.wren(response_valid),
+				.q(mem_content));
+				
+	ram10 U3(
+				.address(address),
+				.clock(clk_in),
+				.data(count_data),
+				.wren(1),
+				.q());
+	
+endmodule
+
+
+
+module statemachine(
+
+input clk,
+input [11:0] mem_content,
+output reg trigger);
+
+reg [1:0] c_state, n_state;
+reg [1:0] state1 = 0, state2 = 1, state3 = 2, state4 =3;
+
+
+
+
+
+
+always @(posedge clk) begin
+
+	case (c_state)
+		state1: begin   //room temp
+		
+				if( mem_content>3643 ) begin
+					n_state = state1;
+				end else begin
+					n_state = state2;
+				end
+				trigger = 0;
+		end
+
+		state2: begin   //more than 40
+				if(mem_content<=3643 ) begin
+					n_state = state2;
+				end else begin
+					n_state = state3;
+				end
+				trigger = 0;
+		end
+
+		state3: begin  //less than 40
+				if(mem_content>3643 ) begin
+					n_state = state3;
+				end else begin
+					n_state = state4;
+				end
+				trigger = 0;
+		end
+		
+		state4: begin  //more than 40
+				trigger = 1;
+				if(mem_content<=3643 ) begin
+					n_state = state4;
+				end else begin
+					n_state = state1;
+				end
+				
+		end
+		
+
+
+		default: begin
+						n_state = state1;
+						trigger = 0;
+					end
+		endcase
+		c_state <= n_state;
+end
+endmodule
+
+	

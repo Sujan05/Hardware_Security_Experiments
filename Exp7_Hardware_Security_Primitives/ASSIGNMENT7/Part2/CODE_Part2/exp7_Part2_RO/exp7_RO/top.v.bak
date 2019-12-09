@@ -1,0 +1,41 @@
+module top(
+
+input en, clk, reset
+
+);
+
+
+
+reg[7:0] counter1=0;
+reg[7:0] counter2=255;
+
+always @(posedge clk) begin
+	if(reset) begin
+		counter1=0;
+		counter2=255;
+	end else begin
+		if(counter1>127) begin
+			counter1 = 0;
+		end else begin
+			counter1 = counter1 +1;
+		end
+		
+		if(counter<128) begin
+			counter = 255;
+		end else begin
+			counter2 = counter2 -1;
+		end		
+	end
+
+end
+
+wire [255:0] x1,x2;
+
+genvar gi;
+
+	generate	
+		for(gi=0; gi<255; gi= gi+1) begin :loop	
+			ro u1 (.en(en), .roout(x1[gi]));
+		endgenerate
+endmodule
+

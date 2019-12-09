@@ -1,0 +1,12 @@
+PowerPlay Power Analyzer Status : Successful - Wed Oct 23 22:58:20 2019
+Quartus Prime Version : 16.1.0 Build 196 10/24/2016 SJ Lite Edition
+Revision Name : exp7
+Top-level Entity Name : exp7
+Family : MAX 10
+Device : 10M50SAE144C8G
+Power Models : Final
+Total Thermal Power Dissipation : 251.29 mW
+Core Dynamic Thermal Power Dissipation : 1.54 mW
+Core Static Thermal Power Dissipation : 241.10 mW
+I/O Thermal Power Dissipation : 8.65 mW
+Power Estimation Confidence : Low: user provided insufficient toggle rate data
